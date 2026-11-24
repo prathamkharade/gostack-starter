@@ -1,0 +1,55 @@
+# Development services. Light by default:
+#   make dev  -> starts only db + mailpit (~150 MB RAM); the Go app runs natively with hot reload.
+#   make up   -> also builds and runs the app container (profile "full"), like production.
+#
+# Host ports (dev only; containers always talk to each other on db:5432 / mailpit:1025):
+#   Postgres  127.0.0.1:${DB_PORT:-5433}  - 5433 so it never clashes with another local Postgres on 5432.
+#             Keep DB_PORT in sync with DATABASE_URL in .env (make setup does this for you).
+#   Mailpit   127.0.0.1:1025 (SMTP) / 127.0.0.1:8025 (inbox UI)
+# Production does NOT use this file: see deploy/compose.prod.yaml and docs/hosting.md.
+
+# Unique project name so containers/volumes never collide with other projects on this machine.
+name: gostack-dev
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    # small-machine tuning; see deploy/postgres.md for production values
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40", "-c", "work_mem=4MB"]
+    ports: ["127.0.0.1:${DB_PORT:-5433}:5432"]   # localhost only, never 0.0.0.0
+    volumes:
+      - pgdata:/var/lib/postgresql          # PG 18+ image layout
+      - ./deploy/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 3s
+      retries: 20
+    mem_limit: 256m
+
+  mailpit:                                  # catches all dev email: http://localhost:8025
+    image: axllent/mailpit:latest
+    ports: ["127.0.0.1:8025:8025", "127.0.0.1:1025:1025"]
+    mem_limit: 64m
+
+  app:
+    profiles: ["full"]
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/app?sslmode=disable
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      TRUSTED_PROXIES: 172.16.0.0/12
+    ports: ["127.0.0.1:8080:8080"]
+    volumes: ["media:/data/media"]
+    depends_on:
+      db: { condition: service_healthy }
+    mem_limit: 512m
+
+volumes:
+  pgdata:
+  media:

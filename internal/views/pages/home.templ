@@ -1,0 +1,62 @@
+package pages
+
+import (
+	"strconv"
+
+	"app/internal/httpx"
+	"app/internal/views/components"
+	"app/internal/views/layouts"
+)
+
+// Home is the landing page. Replace the copy with your product's pitch.
+// GEO tip: answer engines quote pages that state clearly WHAT the product is,
+// WHO it is for and HOW it works, in plain sentences near the top.
+templ Home() {
+	{{ vd := httpx.VD(ctx) }}
+	@layouts.Base() {
+		<section class="py-12 md:py-20 text-center max-w-3xl mx-auto">
+			<h1 class="text-4xl md:text-5xl font-bold tracking-tight">{ vd.AppName }</h1>
+			<p class="mt-4 text-lg text-muted">A fast, accessible, privacy-first starting point. Describe your idea and build on top of it.</p>
+			<div class="mt-8 flex justify-center gap-3">
+				if vd.User != nil {
+					@components.LinkButton("/items", "primary") {
+						Go to your items
+					}
+				} else {
+					@components.LinkButton("/login", "primary") {
+						Get started – it's free
+					}
+				}
+				@components.LinkButton("/privacy", "secondary") {
+					How we protect your data
+				}
+			</div>
+		</section>
+		<section class="grid md:grid-cols-3 gap-4" aria-label="Features">
+			@feature("Instant sign-in", "No passwords to remember: we email you a one-time code.")
+			@feature("Private by design", "Personal data is encrypted at rest and you can export or delete it any time.")
+			@feature("Fast everywhere", "Server-rendered pages under 50 KB, optimised images and video.")
+		</section>
+	}
+}
+
+templ feature(title, text string) {
+	@components.Card() {
+		<h2 class="font-semibold">{ title }</h2>
+		<p class="text-muted mt-1">{ text }</p>
+	}
+}
+
+templ Error(code int, msg string) {
+	@layouts.Base() {
+		<div class="text-center py-20">
+			<p class="text-sm font-semibold text-brand-600">{ strconv.Itoa(code) }</p>
+			<h1 class="text-3xl font-bold mt-2">{ msg }</h1>
+			<div class="mt-8">
+				@components.LinkButton("/", "secondary") {
+					Back to home
+				}
+			</div>
+		</div>
+	}
+}

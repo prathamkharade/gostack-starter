@@ -1,0 +1,103 @@
+package components
+
+// Design tokens and component classes (btn, card, input…) are defined once in
+// static/css/input.css. Change the look there; markup stays the same.
+
+// Button variants: primary | secondary | danger | ghost
+templ Button(variant string, attrs templ.Attributes) {
+	<button class={ "btn", "btn-" + orDefault(variant, "primary") } { attrs... }>
+		{ children... }
+	</button>
+}
+
+templ LinkButton(href, variant string) {
+	<a href={ href } class={ "btn", "btn-" + orDefault(variant, "primary") }>
+		{ children... }
+	</a>
+}
+
+templ Card() {
+	<section class="card">
+		{ children... }
+	</section>
+}
+
+// PageHeader: title + optional subtitle; children render as right-aligned actions.
+templ PageHeader(title, subtitle string) {
+	<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+		<div>
+			<h1 class="text-2xl font-semibold tracking-tight">{ title }</h1>
+			if subtitle != "" {
+				<p class="text-muted mt-1">{ subtitle }</p>
+			}
+		</div>
+		<div class="flex gap-2">
+			{ children... }
+		</div>
+	</div>
+}
+
+// Badge tones: neutral | success | warning | danger | info
+templ Badge(text, tone string) {
+	<span class={ "badge", "badge-" + orDefault(tone, "neutral") }>{ text }</span>
+}
+
+// Alert kinds: success | error | info | warning
+templ Alert(kind, msg string) {
+	<div class={ "alert", "alert-" + orDefault(kind, "info") } role={ alertRole(kind) }>
+		<p>{ msg }</p>
+	</div>
+}
+
+templ EmptyState(title, text string) {
+	<div class="text-center py-16 px-4 border border-dashed border-border rounded-xl">
+		<h2 class="font-semibold text-lg">{ title }</h2>
+		<p class="text-muted mt-1 mb-4">{ text }</p>
+		{ children... }
+	</div>
+}
+
+// Spinner pairs with htmx: it is visible only while a request is in flight
+// when placed inside an element with hx-indicator or the requesting element.
+templ Spinner() {
+	<span class="htmx-indicator inline-block size-4 rounded-full border-2 border-current border-r-transparent animate-spin" aria-hidden="true"></span>
+}
+
+// Toasts receives messages sent by the server with httpx.Toast (HX-Trigger).
+templ Toasts() {
+	<div x-data="toasts" x-on:toast.window="add" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 w-80 max-w-[calc(100vw-2rem)]" aria-live="polite" role="status">
+		<template x-for="t in items" x-bind:key="t.id">
+			<div class="alert shadow-lg" x-bind:class="t.cls" x-transition>
+				<p x-text="t.msg"></p>
+			</div>
+		</template>
+	</div>
+}
+
+// Dialog is a native <dialog> (focus trap + Esc for free). Open it from any
+// element inside the same x-data="dialog" scope with x-on:click="show".
+templ Dialog(title string) {
+	<dialog x-ref="dialog" class="dialog" aria-label={ title }>
+		<div class="flex items-center justify-between mb-4">
+			<h2 class="text-lg font-semibold">{ title }</h2>
+			<button type="button" class="btn btn-ghost" x-on:click="hide" aria-label="Close">
+				@IconX()
+			</button>
+		</div>
+		{ children... }
+	</dialog>
+}
+
+func orDefault(v, d string) string {
+	if v == "" {
+		return d
+	}
+	return v
+}
+
+func alertRole(kind string) string {
+	if kind == "error" {
+		return "alert"
+	}
+	return "status"
+}

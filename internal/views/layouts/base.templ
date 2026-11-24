@@ -1,0 +1,81 @@
+package layouts
+
+import (
+	"app/internal/httpx"
+	"app/internal/seo"
+	"app/internal/views/components"
+	"app/static"
+)
+
+// Base is the HTML shell for every page: SEO <head>, navigation, flash
+// messages, toasts and footer. Page content goes in children.
+//
+// Script rules (strict CSP, see docs/ui.md): no inline <script>, no inline
+// event handlers, no style="" attributes. Alpine logic lives in static/js/app.js.
+templ Base() {
+	{{ vd := httpx.VD(ctx) }}
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ vd.Meta.FullTitle(vd.AppName) }</title>
+			if vd.Meta.Description != "" {
+				<meta name="description" content={ vd.Meta.Description }/>
+			}
+			if vd.Meta.NoIndex {
+				<meta name="robots" content="noindex, nofollow"/>
+			}
+			if vd.Meta.Path != "" {
+				<link rel="canonical" href={ seo.Abs(vd.BaseURL, vd.Meta.Path) }/>
+				<meta property="og:url" content={ seo.Abs(vd.BaseURL, vd.Meta.Path) }/>
+			}
+			<meta property="og:site_name" content={ vd.AppName }/>
+			<meta property="og:title" content={ vd.Meta.FullTitle(vd.AppName) }/>
+			if vd.Meta.Description != "" {
+				<meta property="og:description" content={ vd.Meta.Description }/>
+			}
+			<meta property="og:type" content={ ogType(vd.Meta.Type) }/>
+			if vd.Meta.Image != "" {
+				<meta property="og:image" content={ seo.Abs(vd.BaseURL, vd.Meta.Image) }/>
+				<meta name="twitter:card" content="summary_large_image"/>
+			} else {
+				<meta name="twitter:card" content="summary"/>
+			}
+			<meta name="theme-color" content="#4f46e5"/>
+			<link rel="icon" href={ static.Path("img/favicon.svg") } type="image/svg+xml"/>
+			<link rel="manifest" href="/manifest.webmanifest"/>
+			<link rel="stylesheet" href={ static.Path("css/app.css") }/>
+			<!-- theme.js is tiny and blocking on purpose: it sets dark/light before first paint (no flash) -->
+			<script src={ static.Path("js/theme.js") }></script>
+			<script defer src={ static.Path("vendor/htmx.min.js") }></script>
+			<script defer src={ static.Path("js/app.js") }></script>
+			<script defer src={ static.Path("vendor/alpine-csp.min.js") }></script>
+			<meta name="htmx-config" content={ `{"noSwap":[204,304,"5xx"],"defaultTimeout":30000}` }/>
+			for _, j := range vd.Meta.JSONLD {
+				@templ.Raw(seo.JSONLDScript(j))
+			}
+		</head>
+		<body hx-boost:inherited="true" class="min-h-dvh flex flex-col bg-surface text-fg antialiased">
+			<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 btn btn-primary">Skip to content</a>
+			@components.Navbar()
+			<main id="main" class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-8" tabindex="-1">
+				if vd.Flash != nil {
+					<div class="mb-6">
+						@components.Alert(vd.Flash.Kind, vd.Flash.Msg)
+					</div>
+				}
+				{ children... }
+			</main>
+			@components.Footer()
+			@components.Toasts()
+		</body>
+	</html>
+}
+
+func ogType(t string) string {
+	if t == "" {
+		return "website"
+	}
+	return t
+}

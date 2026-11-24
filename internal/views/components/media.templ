@@ -1,0 +1,83 @@
+package components
+
+import (
+	"strconv"
+
+	"app/internal/media"
+)
+
+// Picture renders a responsive, lazy-loaded image from processed variants.
+// sizes example: "(min-width: 768px) 50vw, 100vw". Pass eager=true for the
+// largest above-the-fold image (LCP) so it is not lazy-loaded.
+templ Picture(m *media.Media, alt, sizes string, eager bool) {
+	if m != nil && m.Status == "ready" {
+		<img
+			src={ m.URL(m.Best()) }
+			srcset={ m.SrcSet() }
+			sizes={ orDefault(sizes, "100vw") }
+			alt={ alt }
+			if m.Width > 0 {
+				width={ strconv.Itoa(m.Width) }
+				height={ strconv.Itoa(m.Height) }
+			}
+			if eager {
+				fetchpriority="high"
+			} else {
+				loading="lazy"
+			}
+			decoding="async"
+			class="w-full h-auto rounded-lg bg-subtle"
+		/>
+	}
+}
+
+templ Video(m *media.Media) {
+	if m != nil && m.Status == "ready" {
+		<video controls preload="metadata" playsinline class="w-full rounded-lg bg-black" poster={ posterURL(m) }>
+			<source src={ m.URL("video") } type="video/mp4"/>
+		</video>
+	}
+}
+
+// MediaPreview picks the right element for any kind of file.
+templ MediaPreview(m *media.Media) {
+	if m.Status == "pending" {
+		<div class="aspect-video grid place-items-center rounded-lg bg-subtle text-muted text-sm gap-2">
+			@Spinner()
+			<span>Optimising…</span>
+		</div>
+	} else if m.Status == "failed" {
+		<div class="aspect-video grid place-items-center rounded-lg bg-subtle text-danger text-sm">Processing failed</div>
+	} else if m.Kind == media.Image {
+		@Picture(m, m.Name, "(min-width: 768px) 33vw, 100vw", false)
+	} else if m.Kind == media.Video {
+		@Video(m)
+	} else if m.Kind == media.Audio {
+		<audio controls preload="none" class="w-full" src={ m.URL("audio") }></audio>
+	} else {
+		<a href={ m.URL(m.Best()) } class="aspect-video grid place-items-center rounded-lg bg-subtle hover:bg-border text-sm" download>
+			<span>Download { m.Name }</span>
+		</a>
+	}
+}
+
+func posterURL(m *media.Media) string {
+	if _, ok := m.Variant("poster"); ok {
+		return m.URL("poster")
+	}
+	return ""
+}
+
+// HumanSize formats bytes as KB/MB/GB.
+func HumanSize(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return strconv.FormatInt(n, 10) + " B"
+	}
+	div, exp := int64(unit), 0
+	for v := n / unit; v >= unit; v /= unit {
+		div *= unit
+		exp++
+	}
+	return strconv.FormatFloat(float64(n)/float64(div), 'f', 1, 64) + " " + string("KMGTPE"[exp]) + "B"
+}

@@ -1,0 +1,70 @@
+package pages
+
+import (
+	"app/internal/security"
+	"app/internal/views/components"
+	"app/internal/views/layouts"
+)
+
+// Login is one card that switches between steps without reloading (htmx swaps
+// #login-card). Without JavaScript the same forms post normally.
+templ Login(st LoginState) {
+	@layouts.Base() {
+		<div class="max-w-sm mx-auto">
+			@LoginCard(st)
+		</div>
+	}
+}
+
+templ LoginCard(st LoginState) {
+	<div id="login-card" class="card">
+		if st.Step == "code" {
+			<h1 class="text-xl font-semibold">Check your email</h1>
+			<p class="text-muted mt-1 mb-6">We sent a 6-digit code to <strong>{ security.MaskEmail(st.Email) }</strong>. It expires in 10 minutes.</p>
+			<form method="post" action="/login/verify" hx-post="/login/verify" hx-target="#login-card" hx-swap="outerHTML" class="flex flex-col gap-4">
+				<input type="hidden" name="email" value={ st.Email }/>
+				<input type="hidden" name="next" value={ st.Next }/>
+				@components.Field(components.FieldProps{
+					Label: "Code", Name: "code", Error: st.Errors.Get("code"), Required: true, Autocomplete: "one-time-code",
+					Attrs: templ.Attributes{"inputmode": "numeric", "pattern": "[0-9 ]*", "maxlength": "7", "autofocus": true},
+				})
+				<button type="submit" class="btn btn-primary">Continue</button>
+			</form>
+			<form method="post" action="/login" hx-post="/login" hx-target="#login-card" hx-swap="outerHTML" class="mt-4 text-center">
+				<input type="hidden" name="email" value={ st.Email }/>
+				<input type="hidden" name="next" value={ st.Next }/>
+				<button type="submit" class="text-sm text-brand-600 hover:underline">Send a new code</button>
+			</form>
+		} else if st.Step == "password" {
+			<h1 class="text-xl font-semibold mb-6">Sign in with password</h1>
+			<form method="post" action="/login/password" hx-post="/login/password" hx-target="#login-card" hx-swap="outerHTML" class="flex flex-col gap-4">
+				<input type="hidden" name="next" value={ st.Next }/>
+				@components.Field(components.FieldProps{Label: "Email", Name: "email", Type: "email", Value: st.Email, Required: true, Autocomplete: "username"})
+				@components.Field(components.FieldProps{Label: "Password", Name: "password", Type: "password", Error: st.Errors.Get("password"), Required: true, Autocomplete: "current-password"})
+				<button type="submit" class="btn btn-primary">Sign in</button>
+			</form>
+			<p class="mt-4 text-center text-sm"><a href="/login" class="text-brand-600 hover:underline">Use an email code instead</a></p>
+		} else {
+			<h1 class="text-xl font-semibold">Sign in or create an account</h1>
+			<p class="text-muted mt-1 mb-6">Enter your email and we'll send you a code. No password needed.</p>
+			<form method="post" action="/login" hx-post="/login" hx-target="#login-card" hx-swap="outerHTML" class="flex flex-col gap-4">
+				<input type="hidden" name="next" value={ st.Next }/>
+				<!-- honeypot: hidden from humans and screen readers, bots fill it -->
+				<div class="hidden" aria-hidden="true">
+					<label for="website">Website</label>
+					<input id="website" type="text" name="website" tabindex="-1" autocomplete="off"/>
+				</div>
+				@components.Field(components.FieldProps{
+					Label: "Email", Name: "email", Type: "email", Value: st.Email, Error: st.Errors.Get("email"),
+					Required: true, Autocomplete: "email", Attrs: templ.Attributes{"autofocus": true},
+				})
+				<button type="submit" class="btn btn-primary">
+					Continue
+					@components.Spinner()
+				</button>
+				<p class="text-xs text-muted">By continuing you agree to our <a href="/terms" class="underline">Terms</a> and confirm you have read our <a href="/privacy" class="underline">Privacy notice</a>.</p>
+			</form>
+			<p class="mt-4 text-center text-sm"><a href="/login?step=password" class="text-brand-600 hover:underline">Sign in with a password</a></p>
+		}
+	</div>
+}

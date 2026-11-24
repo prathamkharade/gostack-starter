@@ -1,0 +1,164 @@
+package items
+
+import (
+	"app/internal/listing"
+	"app/internal/media"
+	"app/internal/validate"
+	"app/internal/views/components"
+	"app/internal/views/layouts"
+)
+
+// ListPage = header + controls (search/filter/sort) + #results.
+// htmx requests re-render only Results (see handlers.list).
+templ ListPage(page listing.Page[Item]) {
+	@layouts.Base() {
+		@components.PageHeader("Items", "Example resource: search, filter, sort and paginate.") {
+			@components.LinkButton("/items/new", "primary") {
+				New item
+			}
+		}
+		@components.ListControls("/items", "#results", page.Params) {
+			@components.FilterSelect(Spec.Filters[0], page.Params)
+			@components.FilterDate(Spec.Filters[1], page.Params)
+			@components.FilterDate(Spec.Filters[2], page.Params)
+			@components.SortSelect(SortOptions, page.Params.Sort)
+		}
+		@Results(page)
+	}
+}
+
+templ Results(page listing.Page[Item]) {
+	<div id="results" aria-live="polite">
+		if len(page.Items) == 0 {
+			if page.Params.Active() {
+				@components.EmptyState("No matches", "Try a different search or clear the filters.") {
+					@components.LinkButton("/items", "secondary") {
+						Clear filters
+					}
+				}
+			} else {
+				@components.EmptyState("No items yet", "Create your first item to get started.") {
+					@components.LinkButton("/items/new", "primary") {
+						New item
+					}
+				}
+			}
+		} else {
+			<div class="card p-0 overflow-x-auto">
+				<table class="table">
+					<thead>
+						<tr>
+							<th scope="col">Title</th>
+							<th scope="col">Status</th>
+							<th scope="col" class="hidden sm:table-cell">Created</th>
+							<th scope="col"><span class="sr-only">Actions</span></th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, it := range page.Items {
+							@Row(it)
+						}
+					</tbody>
+				</table>
+			</div>
+			@components.Pagination(page.Pager("/items"), "#results")
+		}
+	</div>
+}
+
+templ Row(it Item) {
+	<tr id={ "item-" + it.ID }>
+		<td class="font-medium">
+			<a href={ "/items/" + it.ID + "/edit" } class="hover:underline">{ it.Title }</a>
+		</td>
+		<td>
+			@components.Badge(it.Status, statusTone(it.Status))
+		</td>
+		<td class="hidden sm:table-cell text-muted">{ it.CreatedAt.Format("2 Jan 2006") }</td>
+		<td class="text-right whitespace-nowrap">
+			if it.Status == "published" {
+				<a href={ "/i/" + it.ID } class="btn btn-ghost">View</a>
+			}
+			<button
+				type="button"
+				class="btn btn-ghost text-danger"
+				hx-post={ "/items/" + it.ID + "/delete" }
+				hx-target={ "#item-" + it.ID }
+				hx-swap="outerHTML"
+				hx-confirm="Delete this item?"
+			>Delete</button>
+		</td>
+	</tr>
+}
+
+templ FormPage(id string, f form, errs validate.Errors) {
+	@layouts.Base() {
+		<div class="max-w-2xl">
+			@components.Breadcrumbs([][2]string{{"Items", "/items"}, {title(id), ""}})
+			@components.PageHeader(title(id), "")
+			@components.Card() {
+				<form method="post" action={ action(id) } class="flex flex-col gap-4">
+					@components.Field(components.FieldProps{Label: "Title", Name: "title", Value: f.Title, Error: errs.Get("title"), Required: true, Attrs: templ.Attributes{"maxlength": "200", "autofocus": true}})
+					@components.TextArea(components.FieldProps{Label: "Body", Name: "body", Value: f.Body, Error: errs.Get("body"), Hint: "Plain text. Searchable."}, "8")
+					@components.Select(components.FieldProps{Label: "Status", Name: "status", Value: f.Status, Error: errs.Get("status"), Hint: "Published items get a public, indexable page."}, statusOptions())
+					@components.Field(components.FieldProps{Label: "Cover image ID (optional)", Name: "cover_id", Value: f.CoverID, Error: errs.Get("cover_id"), Hint: "Upload an image on the Uploads page and paste its ID. Replace with a picker in your app."})
+					<div class="flex gap-2">
+						<button type="submit" class="btn btn-primary">Save</button>
+						<a href="/items" class="btn btn-ghost">Cancel</a>
+					</div>
+				</form>
+			}
+		</div>
+	}
+}
+
+// PublicPage is server-rendered, cacheable and indexable (see seo.Meta in handlers.public).
+templ PublicPage(it *Item, cover *media.Media) {
+	@layouts.Base() {
+		<article class="max-w-3xl mx-auto">
+			<header class="mb-6">
+				<h1 class="text-3xl md:text-4xl font-bold tracking-tight">{ it.Title }</h1>
+				<p class="text-muted mt-2"><time datetime={ it.CreatedAt.Format("2006-01-02") }>{ it.CreatedAt.Format("2 January 2006") }</time></p>
+			</header>
+			if cover != nil {
+				<div class="mb-6">
+					@components.Picture(cover, it.Title, "(min-width: 768px) 768px, 100vw", true)
+				</div>
+			}
+			<div class="prose whitespace-pre-line">{ it.Body }</div>
+		</article>
+	}
+}
+
+func title(id string) string {
+	if id == "" {
+		return "New item"
+	}
+	return "Edit item"
+}
+
+func action(id string) string {
+	if id == "" {
+		return "/items"
+	}
+	return "/items/" + id
+}
+
+func statusTone(s string) string {
+	switch s {
+	case "published":
+		return "success"
+	case "archived":
+		return "neutral"
+	default:
+		return "warning"
+	}
+}
+
+func statusOptions() []components.Option {
+	var o []components.Option
+	for _, s := range Statuses {
+		o = append(o, components.Option{Value: s, Label: s})
+	}
+	return o
+}

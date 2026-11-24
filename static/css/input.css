@@ -1,0 +1,136 @@
+/*
+ * Design system – the ONLY place to change the look of the app.
+ * Built by the Tailwind v4 standalone CLI (no Node needed):  make css
+ *
+ * 1. Tokens (@theme): colours, fonts, radii. Semantic colours (surface, fg,
+ *    muted, border…) switch automatically in dark mode, so templates rarely
+ *    need dark: variants.
+ * 2. Components (@layer components): btn, card, input, badge, alert, table…
+ *    Always emitted, so classes built in Go ("btn-" + variant) work.
+ */
+@import "tailwindcss";
+
+/* scan templates and JS for utility classes */
+@source "../../internal";
+@source "../js";
+
+/* explicit dark mode toggle (data-theme on <html>, set by js/theme.js) */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  /* System font stack: zero bytes downloaded, instant text, no third-party font CDN (privacy). */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Brand – change these to rebrand everything */
+  --color-brand-50: oklch(0.97 0.02 277);
+  --color-brand-100: oklch(0.93 0.04 277);
+  --color-brand-500: oklch(0.59 0.2 277);
+  --color-brand-600: oklch(0.51 0.23 277);
+  --color-brand-700: oklch(0.46 0.21 277);
+
+  /* Semantic tokens (light) */
+  --color-surface: oklch(1 0 0);
+  --color-subtle: oklch(0.97 0.003 265);
+  --color-fg: oklch(0.21 0.02 265);
+  --color-muted: oklch(0.5 0.02 265);
+  --color-border: oklch(0.91 0.005 265);
+  --color-danger: oklch(0.55 0.21 27);
+  --color-success: oklch(0.55 0.15 150);
+  --color-warning: oklch(0.65 0.15 70);
+
+  --radius-ui: 0.6rem;
+}
+
+/* Dark mode = different token values; components and utilities follow. */
+[data-theme="dark"] {
+  --color-surface: oklch(0.18 0.01 265);
+  --color-subtle: oklch(0.23 0.012 265);
+  --color-fg: oklch(0.95 0.005 265);
+  --color-muted: oklch(0.7 0.015 265);
+  --color-border: oklch(0.3 0.012 265);
+  --color-brand-600: oklch(0.65 0.18 277);
+  --color-brand-700: oklch(0.7 0.16 277);
+  color-scheme: dark;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  :focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+  [x-cloak] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    border-radius: var(--radius-ui); padding: 0.5rem 0.9rem; font-size: 0.875rem; font-weight: 500;
+    line-height: 1.25rem; border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+    transition: background-color 120ms, border-color 120ms, color 120ms;
+  }
+  .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+  .btn-primary { background: var(--color-brand-600); color: white; }
+  .btn-primary:hover { background: var(--color-brand-700); }
+  .btn-secondary { background: var(--color-surface); color: var(--color-fg); border-color: var(--color-border); }
+  .btn-secondary:hover { background: var(--color-subtle); }
+  .btn-danger { background: var(--color-danger); color: white; }
+  .btn-danger:hover { filter: brightness(0.92); }
+  .btn-ghost { background: transparent; color: inherit; padding-inline: 0.6rem; }
+  .btn-ghost:hover { background: var(--color-subtle); }
+
+  .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: calc(var(--radius-ui) * 1.5); padding: 1.25rem; }
+  .card-title { font-weight: 600; margin-bottom: 0.75rem; }
+
+  .field { display: flex; flex-direction: column; gap: 0.35rem; }
+  .label { font-size: 0.875rem; font-weight: 500; }
+  .input {
+    width: 100%; border-radius: var(--radius-ui); border: 1px solid var(--color-border); background: var(--color-surface);
+    color: var(--color-fg); padding: 0.5rem 0.75rem; font-size: 1rem; /* 16px avoids iOS zoom on focus */
+  }
+  .input:focus { outline: 2px solid var(--color-brand-500); outline-offset: 0; border-color: transparent; }
+  .input-error { border-color: var(--color-danger); }
+  input[type="file"].input { padding: 0.35rem; font-size: 0.875rem; }
+  input[type="file"].input::file-selector-button {
+    margin-right: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-ui);
+    background: var(--color-subtle); color: var(--color-fg); padding: 0.3rem 0.7rem; cursor: pointer;
+  }
+
+  .nav-link { border-radius: var(--radius-ui); padding: 0.4rem 0.7rem; font-size: 0.9rem; color: var(--color-muted); }
+  .nav-link:hover, .nav-link-active { color: var(--color-fg); background: var(--color-subtle); }
+
+  .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 0.1rem 0.55rem; font-size: 0.75rem; font-weight: 500; border: 1px solid var(--color-border); }
+  .badge-neutral { color: var(--color-muted); }
+  .badge-success { color: var(--color-success); border-color: color-mix(in oklch, var(--color-success) 40%, transparent); }
+  .badge-warning { color: var(--color-warning); border-color: color-mix(in oklch, var(--color-warning) 40%, transparent); }
+  .badge-danger { color: var(--color-danger); border-color: color-mix(in oklch, var(--color-danger) 40%, transparent); }
+  .badge-info { color: var(--color-brand-600); border-color: color-mix(in oklch, var(--color-brand-600) 40%, transparent); }
+
+  .alert { border-radius: var(--radius-ui); border: 1px solid var(--color-border); padding: 0.75rem 1rem; background: var(--color-surface); font-size: 0.9rem; }
+  .alert-success { border-color: var(--color-success); }
+  .alert-error { border-color: var(--color-danger); color: var(--color-danger); }
+  .alert-info { border-color: var(--color-brand-500); }
+  .alert-warning { border-color: var(--color-warning); }
+
+  .table { width: 100%; font-size: 0.9rem; border-collapse: collapse; }
+  .table th { text-align: left; font-weight: 500; color: var(--color-muted); padding: 0.6rem 1rem; border-bottom: 1px solid var(--color-border); }
+  .table td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+  .table tr:last-child td { border-bottom: 0; }
+
+  .dialog { margin: auto; width: min(32rem, calc(100vw - 2rem)); border-radius: calc(var(--radius-ui) * 1.5); padding: 1.5rem;
+    background: var(--color-surface); color: var(--color-fg); border: 1px solid var(--color-border); }
+  .dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+
+  /* Lightweight typography for content pages (no plugin needed) */
+  .prose { line-height: 1.7; }
+  .prose h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.2; }
+  .prose h2 { font-size: 1.3rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+  .prose p, .prose ul, .prose table { margin-bottom: 1rem; }
+  .prose a { color: var(--color-brand-600); text-decoration: underline; }
+  .prose table { width: 100%; font-size: 0.9rem; border-collapse: collapse; }
+  .prose th, .prose td { border: 1px solid var(--color-border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+
+  /* htmx request indicators (htmx injects the opacity rules; this sizes them) */
+  .htmx-indicator { transition: opacity 150ms; }
+}

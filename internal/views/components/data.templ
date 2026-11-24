@@ -1,0 +1,101 @@
+package components
+
+import (
+	"strconv"
+
+	"app/internal/listing"
+)
+
+// ListControls is a search box + filters + sort in ONE form, so every change
+// sends the full state. htmx swaps only the results and updates the URL, so
+// the page is shareable/bookmarkable and works without JavaScript too.
+//
+//	@components.ListControls("/items", "#results", p) { ...extra filter fields... }
+templ ListControls(action, target string, p listing.Params) {
+	<form
+		role="search"
+		action={ action }
+		method="get"
+		class="flex flex-col md:flex-row gap-3 md:items-end mb-4"
+		hx-get={ action }
+		hx-target={ target }
+		hx-trigger="input changed delay:300ms from:input[type=search], change, submit"
+		hx-push-url="true"
+		hx-sync="this:replace"
+		hx-indicator="#list-spinner"
+	>
+		<div class="field flex-1">
+			<label for="q" class="label">Search</label>
+			<div class="relative">
+				<input id="q" type="search" name="q" value={ p.Q } class="input pl-9" placeholder="Search…" autocomplete="off" maxlength="200"/>
+				<span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+					@IconSearch()
+				</span>
+			</div>
+		</div>
+		{ children... }
+		<noscript><button type="submit" class="btn btn-secondary">Apply</button></noscript>
+		<span id="list-spinner" class="htmx-indicator self-center">
+			@Spinner()
+		</span>
+	</form>
+}
+
+// FilterSelect renders a single-choice filter from a listing.Filter.
+templ FilterSelect(f listing.Filter, p listing.Params) {
+	<div class="field">
+		<label for={ "flt-" + f.Param } class="label">{ f.Label }</label>
+		<select id={ "flt-" + f.Param } name={ f.Param } class="input">
+			<option value="">All</option>
+			for _, v := range f.Values {
+				<option value={ v } selected?={ p.Has(f.Param, v) }>{ v }</option>
+			}
+		</select>
+	</div>
+}
+
+// FilterDate renders a date filter (Kind: listing.Date).
+templ FilterDate(f listing.Filter, p listing.Params) {
+	<div class="field">
+		<label for={ "flt-" + f.Param } class="label">{ f.Label }</label>
+		<input id={ "flt-" + f.Param } type="date" name={ f.Param } value={ p.First(f.Param) } class="input"/>
+	</div>
+}
+
+templ SortSelect(options [][2]string, current string) {
+	<div class="field">
+		<label for="sort" class="label">Sort</label>
+		<select id="sort" name="sort" class="input">
+			for _, o := range options {
+				<option value={ o[0] } selected?={ o[0] == current }>{ o[1] }</option>
+			}
+		</select>
+	</div>
+}
+
+// Pagination keeps all filters in the links (from listing.Page.Pager).
+templ Pagination(pg listing.Pager, target string) {
+	<nav class="flex items-center justify-between gap-4 mt-4 text-sm" aria-label="Pagination">
+		<p class="text-muted">
+			if pg.Total == 0 {
+				No results
+			} else {
+				Showing { strconv.Itoa(pg.From) }–{ strconv.Itoa(pg.To) }
+				if pg.Total > 0 {
+					of { strconv.Itoa(pg.Total) }
+					if pg.Capped {
+						+
+					}
+				}
+			}
+		</p>
+		<div class="flex gap-2">
+			if pg.HasPrev {
+				<a href={ pg.PrevURL } class="btn btn-secondary" hx-get={ pg.PrevURL } hx-target={ target } hx-push-url="true" rel="prev">Previous</a>
+			}
+			if pg.HasNext {
+				<a href={ pg.NextURL } class="btn btn-secondary" hx-get={ pg.NextURL } hx-target={ target } hx-push-url="true" rel="next">Next</a>
+			}
+		</div>
+	</nav>
+}

@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "anthropic.claude-code",
+    "ms-vscode-remote.remote-wsl",
+    "golang.go",
+    "a-h.templ",
+    "bradlc.vscode-tailwindcss"
+  ]
+}

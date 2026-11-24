@@ -1,0 +1,107 @@
+package components
+
+// FieldProps configures an input. Errors come from validate.Errors.Get(name).
+type FieldProps struct {
+	Label        string
+	Name         string
+	Type         string // text | email | password | number | date | tel | url …
+	Value        string
+	Error        string
+	Hint         string
+	Placeholder  string
+	Required     bool
+	Autocomplete string
+	Attrs        templ.Attributes // extra attributes (inputmode, maxlength, autofocus…)
+	ID           string           // optional; set it when two fields on one page share a Name (ids must be unique)
+}
+
+func (p FieldProps) id() string {
+	if p.ID != "" {
+		return p.ID
+	}
+	return "f-" + p.Name
+}
+
+templ Field(p FieldProps) {
+	<div class="field">
+		<label for={ p.id() } class="label">
+			{ p.Label }
+			if p.Required {
+				<span class="text-danger" aria-hidden="true">*</span>
+			}
+		</label>
+		<input
+			id={ p.id() }
+			name={ p.Name }
+			type={ orDefault(p.Type, "text") }
+			value={ p.Value }
+			class={ "input", templ.KV("input-error", p.Error != "") }
+			placeholder={ p.Placeholder }
+			autocomplete={ orDefault(p.Autocomplete, "off") }
+			required?={ p.Required }
+			aria-invalid={ boolStr(p.Error != "") }
+			if p.Error != "" || p.Hint != "" {
+				aria-describedby={ p.id() + "-desc" }
+			}
+			{ p.Attrs... }
+		/>
+		@fieldHelp(p.id(), p.Error, p.Hint)
+	</div>
+}
+
+templ TextArea(p FieldProps, rows string) {
+	<div class="field">
+		<label for={ p.id() } class="label">{ p.Label }</label>
+		<textarea
+			id={ p.id() }
+			name={ p.Name }
+			rows={ rows }
+			class={ "input", templ.KV("input-error", p.Error != "") }
+			placeholder={ p.Placeholder }
+			required?={ p.Required }
+			aria-invalid={ boolStr(p.Error != "") }
+			if p.Error != "" || p.Hint != "" {
+				aria-describedby={ p.id() + "-desc" }
+			}
+			{ p.Attrs... }
+		>{ p.Value }</textarea>
+		@fieldHelp(p.id(), p.Error, p.Hint)
+	</div>
+}
+
+// Option is a (value, label) pair.
+type Option struct{ Value, Label string }
+
+templ Select(p FieldProps, options []Option) {
+	<div class="field">
+		<label for={ p.id() } class="label">{ p.Label }</label>
+		<select id={ p.id() } name={ p.Name } class={ "input", templ.KV("input-error", p.Error != "") } { p.Attrs... }>
+			for _, o := range options {
+				<option value={ o.Value } selected?={ o.Value == p.Value }>{ o.Label }</option>
+			}
+		</select>
+		@fieldHelp(p.id(), p.Error, p.Hint)
+	</div>
+}
+
+templ Checkbox(name, label string, checked bool, attrs templ.Attributes) {
+	<label class="flex items-start gap-3 cursor-pointer">
+		<input type="checkbox" name={ name } class="mt-1 size-4 accent-brand-600" checked?={ checked } { attrs... }/>
+		<span>{ label }</span>
+	</label>
+}
+
+templ fieldHelp(id, err, hint string) {
+	if err != "" {
+		<p id={ id + "-desc" } class="text-sm text-danger mt-1">{ err }</p>
+	} else if hint != "" {
+		<p id={ id + "-desc" } class="text-sm text-muted mt-1">{ hint }</p>
+	}
+}
+
+func boolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}

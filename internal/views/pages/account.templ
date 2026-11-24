@@ -1,0 +1,121 @@
+package pages
+
+import (
+	"app/internal/security"
+	"app/internal/views/components"
+	"app/internal/views/layouts"
+)
+
+// Account is the self-service privacy centre: profile, sign-in methods,
+// sessions, consent, export and deletion (GDPR Art. 15-21 in one place).
+templ Account(d AccountData) {
+	@layouts.Base() {
+		@components.PageHeader("Your account", "Manage your profile, security and data.")
+		<div class="grid gap-6 lg:grid-cols-2">
+			@components.Card() {
+				<h2 class="card-title">Profile</h2>
+				@ProfileForm(d)
+			}
+			@components.Card() {
+				<h2 class="card-title">Sign-in & security</h2>
+				<dl class="grid grid-cols-3 gap-2 text-sm mb-4">
+					<dt class="text-muted">Email</dt>
+					<dd class="col-span-2">
+						{ d.User.Email }
+						if d.User.EmailVerified {
+							@components.Badge("verified", "success")
+						}
+					</dd>
+					<dt class="text-muted">Phone</dt>
+					<dd class="col-span-2">
+						if d.User.Phone != "" {
+							{ security.MaskPhone(d.User.Phone) }
+							@components.Badge("verified", "success")
+						} else {
+							<span class="text-muted">Not added</span>
+						}
+					</dd>
+				</dl>
+				<div id="phone-box">
+					<form hx-post="/account/phone" hx-target="#phone-box" class="flex gap-2 items-end">
+						@components.Field(components.FieldProps{Label: "Add or change phone", Name: "phone", Type: "tel", Placeholder: "+447700900123", Autocomplete: "tel"})
+						<button type="submit" class="btn btn-secondary mb-0.5">Send code</button>
+					</form>
+				</div>
+				<details class="mt-4">
+					<summary class="cursor-pointer text-sm font-medium">
+						if d.User.HasPassword {
+							Change password
+						} else {
+							Add a password (optional)
+						}
+					</summary>
+					<form method="post" action="/account/password" class="flex flex-col gap-3 mt-3">
+						<input type="text" name="username" value={ d.User.Email } autocomplete="username" class="hidden" aria-hidden="true" tabindex="-1"/>
+						@components.Field(components.FieldProps{Label: "New password", Name: "password", Type: "password", Autocomplete: "new-password", Hint: "At least 10 characters. A passphrase is best.", Required: true})
+						@components.Field(components.FieldProps{Label: "Confirm password", Name: "confirm", Type: "password", Autocomplete: "new-password", Required: true})
+						<button type="submit" class="btn btn-secondary self-start">Save password</button>
+					</form>
+				</details>
+			}
+			@components.Card() {
+				<h2 class="card-title">Where you're signed in</h2>
+				<ul class="divide-y divide-border text-sm">
+					for _, s := range d.Sessions {
+						<li class="py-2 flex justify-between gap-4">
+							<span class="truncate">{ shortUA(s.UserAgent) }</span>
+							<span class="text-muted whitespace-nowrap">
+								{ s.LastUsedAt.Format("2 Jan 2006") }
+							</span>
+						</li>
+					}
+				</ul>
+				<form method="post" action="/account/sessions/revoke-all" class="mt-4">
+					<button type="submit" class="btn btn-secondary">Sign out everywhere</button>
+				</form>
+			}
+			@components.Card() {
+				<h2 class="card-title">Communication preferences</h2>
+				<form hx-post="/account/consents" hx-trigger="change" class="flex flex-col gap-3">
+					@components.Checkbox("marketing_email", "Send me product news and tips by email (optional, unsubscribe any time).", d.Consents["marketing_email"], nil)
+				</form>
+			}
+			@components.Card() {
+				<h2 class="card-title">Your data</h2>
+				<p class="text-sm text-muted mb-4">Download everything we store about you in a machine-readable file (JSON).</p>
+				<a href="/account/export" class="btn btn-secondary" hx-boost="false" download>Download my data</a>
+			}
+			<section class="card border-danger/40" x-data="dialog">
+				<h2 class="card-title text-danger">Delete account</h2>
+				<p class="text-sm text-muted mb-4">Permanently deletes your account, content and files. This cannot be undone.</p>
+				<button type="button" class="btn btn-danger" x-on:click="show">Delete my account…</button>
+				@components.Dialog("Delete account") {
+					<form method="post" action="/account/delete" class="flex flex-col gap-4">
+						<p>Type <strong>DELETE</strong> to confirm.</p>
+						@components.Field(components.FieldProps{Label: "Confirmation", Name: "confirm", ID: "f-delete-confirm", Required: true, Attrs: templ.Attributes{"pattern": "DELETE"}})
+						<div class="flex gap-2 justify-end">
+							<button type="button" class="btn btn-ghost" x-on:click="hide">Cancel</button>
+							<button type="submit" class="btn btn-danger">Delete permanently</button>
+						</div>
+					</form>
+				}
+			</section>
+		</div>
+	}
+}
+
+templ ProfileForm(d AccountData) {
+	<form id="profile-form" method="post" action="/account/profile" hx-post="/account/profile" hx-target="this" hx-swap="outerHTML" class="flex flex-col gap-4">
+		@components.Field(components.FieldProps{Label: "Name", Name: "name", Value: d.User.Name, Error: d.Errors.Get("name"), Autocomplete: "name"})
+		@components.Select(components.FieldProps{Label: "Language", Name: "locale", Value: d.User.Locale, Error: d.Errors.Get("locale")}, []components.Option{{Value: "en", Label: "English"}, {Value: "de", Label: "Deutsch"}, {Value: "fr", Label: "Français"}, {Value: "es", Label: "Español"}, {Value: "it", Label: "Italiano"}, {Value: "nl", Label: "Nederlands"}, {Value: "pl", Label: "Polski"}, {Value: "pt", Label: "Português"}})
+		<button type="submit" class="btn btn-primary self-start">Save</button>
+	</form>
+}
+
+templ PhoneCodeForm(phone string) {
+	<form hx-post="/account/phone/verify" class="flex gap-2 items-end">
+		<input type="hidden" name="phone" value={ phone }/>
+		@components.Field(components.FieldProps{Label: "Code sent to " + security.MaskPhone(phone), Name: "code", Autocomplete: "one-time-code", Attrs: templ.Attributes{"inputmode": "numeric", "autofocus": true}})
+		<button type="submit" class="btn btn-primary mb-0.5">Verify</button>
+	</form>
+}

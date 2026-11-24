@@ -1,0 +1,82 @@
+package pages
+
+import (
+	"strconv"
+
+	"app/internal/media"
+	"app/internal/views/components"
+	"app/internal/views/layouts"
+)
+
+templ Uploads(list []*media.Media, maxMB int) {
+	@layouts.Base() {
+		@components.PageHeader("Uploads", "Images, video, audio, PDFs, archives – optimised automatically.")
+		@components.Card() {
+			<form
+				method="post"
+				action="/uploads"
+				enctype="multipart/form-data"
+				hx-post="/uploads"
+				hx-encoding="multipart/form-data"
+				hx-target="#uploads"
+				hx-swap="afterbegin"
+				class="flex flex-col sm:flex-row gap-3 sm:items-end"
+				x-data="uploader"
+				x-on:htmx:after:request="reset"
+			>
+				<div class="field flex-1">
+					<label for="file" class="label">File (max { strconv.Itoa(maxMB) } MB)</label>
+					<input id="file" type="file" name="file" required class="input" x-ref="file"/>
+				</div>
+				@components.Select(components.FieldProps{Label: "Visibility", Name: "visibility", Value: "private"}, []components.Option{{Value: "private", Label: "Private (only you)"}, {Value: "public", Label: "Public (anyone with the link)"}})
+				<button type="submit" class="btn btn-primary mb-0.5">
+					Upload
+					@components.Spinner()
+				</button>
+			</form>
+		}
+		<div id="uploads" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-6">
+			for _, m := range list {
+				@UploadCard(m)
+			}
+		</div>
+		if len(list) == 0 {
+			<p class="text-muted text-sm mt-4">No uploads yet.</p>
+		}
+	}
+}
+
+// UploadCard polls itself every 2s while the file is being processed.
+templ UploadCard(m *media.Media) {
+	<article
+		id={ "media-" + m.ID }
+		class="card p-3 flex flex-col gap-2"
+		if m.Status == "pending" {
+			hx-get={ "/uploads/" + m.ID + "/status" }
+			hx-trigger="every 2s"
+			hx-swap="outerHTML"
+		}
+	>
+		@components.MediaPreview(m)
+		<div class="flex items-center justify-between gap-2 text-sm">
+			<span class="truncate" title={ m.Name }>{ m.Name }</span>
+			@components.Badge(m.Visibility, "neutral")
+		</div>
+		<div class="flex items-center justify-between text-xs text-muted">
+			<span>
+				{ components.HumanSize(m.Size) }
+				if m.SavedPercent() > 0 {
+					→ { components.HumanSize(m.Stored) } (−{ strconv.Itoa(m.SavedPercent()) }%)
+				}
+			</span>
+			<button
+				type="button"
+				class="text-danger hover:underline"
+				hx-post={ "/uploads/" + m.ID + "/delete" }
+				hx-target={ "#media-" + m.ID }
+				hx-swap="outerHTML"
+				hx-confirm="Delete this file?"
+			>Delete</button>
+		</div>
+	</article>
+}

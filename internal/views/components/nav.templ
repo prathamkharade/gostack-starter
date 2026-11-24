@@ -1,0 +1,117 @@
+package components
+
+import "app/internal/httpx"
+
+// NavLink is one entry of the main navigation. Edit MainNav to change menus.
+type NavLink struct {
+	Label string
+	Href  string
+	Auth  bool // only shown when signed in
+}
+
+var MainNav = []NavLink{
+	{Label: "Items", Href: "/items", Auth: true},
+	{Label: "Uploads", Href: "/uploads", Auth: true},
+}
+
+templ Navbar() {
+	{{ vd := httpx.VD(ctx) }}
+	<header class="border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-40" x-data="navbar">
+		<nav class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-6" aria-label="Main">
+			<a href="/" class="font-semibold text-lg tracking-tight">{ vd.AppName }</a>
+			<ul class="hidden md:flex items-center gap-1 flex-1">
+				for _, l := range MainNav {
+					if !l.Auth || vd.User != nil {
+						<li><a href={ l.Href } class={ "nav-link", templ.KV("nav-link-active", isActive(vd.Path, l.Href)) } aria-current={ current(vd.Path, l.Href) }>{ l.Label }</a></li>
+					}
+				}
+			</ul>
+			<div class="ml-auto flex items-center gap-2">
+				@ThemeToggle()
+				if vd.User != nil {
+					<a href="/account" class="btn btn-ghost hidden md:inline-flex">Account</a>
+					<form method="post" action="/logout" class="hidden md:block">
+						<button type="submit" class="btn btn-secondary">Sign out</button>
+					</form>
+				} else {
+					<a href="/login" class="btn btn-primary">Sign in</a>
+				}
+				<button type="button" class="btn btn-ghost md:hidden" x-on:click="toggle" x-bind:aria-expanded="open" aria-controls="mobile-menu" aria-label="Open menu">
+					@IconMenu()
+				</button>
+			</div>
+		</nav>
+		<div id="mobile-menu" class="md:hidden border-t border-border" hidden x-bind:hidden="closed" x-on:keydown.escape.window="close">
+			<ul class="px-4 py-3 flex flex-col gap-1">
+				for _, l := range MainNav {
+					if !l.Auth || vd.User != nil {
+						<li><a href={ l.Href } class="nav-link block">{ l.Label }</a></li>
+					}
+				}
+				if vd.User != nil {
+					<li><a href="/account" class="nav-link block">Account</a></li>
+					<li>
+						<form method="post" action="/logout"><button type="submit" class="nav-link w-full text-left">Sign out</button></form>
+					</li>
+				}
+			</ul>
+		</div>
+	</header>
+}
+
+templ ThemeToggle() {
+	<button type="button" class="btn btn-ghost" x-data="theme" x-on:click="toggle" aria-label="Toggle dark mode">
+		<span class="dark:hidden">
+			@IconMoon()
+		</span>
+		<span class="hidden dark:inline">
+			@IconSun()
+		</span>
+	</button>
+}
+
+templ Footer() {
+	{{ vd := httpx.VD(ctx) }}
+	<footer class="border-t border-border mt-12">
+		<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row gap-4 justify-between text-sm text-muted">
+			<p>© { vd.Year } { vd.OrgName }</p>
+			<nav aria-label="Legal">
+				<ul class="flex flex-wrap gap-4">
+					<li><a href="/privacy" class="hover:text-fg">Privacy</a></li>
+					<li><a href="/terms" class="hover:text-fg">Terms</a></li>
+					<li><a href="/cookies" class="hover:text-fg">Cookies</a></li>
+					<li><a href="/accessibility" class="hover:text-fg">Accessibility</a></li>
+				</ul>
+			</nav>
+		</div>
+	</footer>
+}
+
+// Breadcrumbs renders an accessible trail; pair with seo.Breadcrumbs JSON-LD.
+templ Breadcrumbs(crumbs [][2]string) {
+	<nav aria-label="Breadcrumb" class="text-sm text-muted mb-4">
+		<ol class="flex flex-wrap items-center gap-1">
+			for i, c := range crumbs {
+				<li class="flex items-center gap-1">
+					if i == len(crumbs)-1 {
+						<span aria-current="page" class="text-fg">{ c[0] }</span>
+					} else {
+						<a href={ c[1] } class="hover:text-fg">{ c[0] }</a>
+						<span aria-hidden="true">/</span>
+					}
+				</li>
+			}
+		</ol>
+	</nav>
+}
+
+func isActive(path, href string) bool {
+	return path == href || (href != "/" && len(path) > len(href) && path[:len(href)+1] == href+"/")
+}
+
+func current(path, href string) string {
+	if isActive(path, href) {
+		return "page"
+	}
+	return "false"
+}

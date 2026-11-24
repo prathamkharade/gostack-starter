@@ -1,0 +1,27 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# build output / generated (rebuilt by `make generate`)
+/bin/
+/tmp/
+*_templ.go
+*_templ.txt
+static/css/app.css
+
+# runtime data
+/data/
+*.log
+
+# tests
+/e2e/node_modules/
+/e2e/test-results/
+/e2e/playwright-report/
+coverage.out
+
+# editors / OS
+.idea/
+.DS_Store
+Thumbs.db
+.claude/settings.local.json

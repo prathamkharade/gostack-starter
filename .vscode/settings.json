@@ -1,0 +1,11 @@
+{
+  "files.eol": "\n",
+  "files.exclude": { "**/*_templ.go": true, "tmp": true, "bin": true },
+  "search.exclude": { "**/*_templ.go": true, "static/vendor": true, "static/css/app.css": true, "e2e/node_modules": true },
+  "files.watcherExclude": { "**/tmp/**": true, "**/data/**": true, "**/e2e/node_modules/**": true },
+  "[go]": { "editor.formatOnSave": true },
+  "[templ]": { "editor.defaultFormatter": "a-h.templ", "editor.formatOnSave": true },
+  "emmet.includeLanguages": { "templ": "html" },
+  "tailwindCSS.includeLanguages": { "templ": "html" },
+  "tailwindCSS.experimental.configFile": "static/css/input.css"
+}

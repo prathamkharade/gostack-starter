@@ -1,0 +1,99 @@
+package pages
+
+import (
+	"app/internal/auth"
+	"app/internal/httpx"
+	"app/internal/views/layouts"
+)
+
+// These are TEMPLATES, not legal advice. Fill them in with your lawyer/DPO using
+// docs/compliance/*. Keep the versions in internal/auth (TermsVersion,
+// PrivacyVersion) in sync when the text changes materially.
+templ prose() {
+	<article class="prose max-w-3xl">
+		{ children... }
+	</article>
+}
+
+templ Privacy() {
+	{{ vd := httpx.VD(ctx) }}
+	@layouts.Base() {
+		@prose() {
+			<h1>Privacy notice</h1>
+			<p class="text-muted">Version { auth.PrivacyVersion }</p>
+			<h2>Who we are</h2>
+			<p>{ vd.OrgName } is the controller of your personal data. Privacy contact: <a href={ "mailto:" + vd.OrgEmail }>{ vd.OrgEmail }</a>.</p>
+			<h2>What we collect and why</h2>
+			<table>
+				<thead><tr><th>Data</th><th>Purpose</th><th>Legal basis</th><th>Kept for</th></tr></thead>
+				<tbody>
+					<tr><td>Email address</td><td>Sign-in, service messages</td><td>Contract (Art. 6(1)(b) GDPR)</td><td>Until you delete your account</td></tr>
+					<tr><td>Name, phone (optional)</td><td>Profile, verification</td><td>Contract</td><td>Until you delete your account</td></tr>
+					<tr><td>Content and files you upload</td><td>Providing the service</td><td>Contract</td><td>Until you delete them or your account</td></tr>
+					<tr><td>Security logs (shortened IP, device type)</td><td>Fraud prevention, security</td><td>Legitimate interest (Art. 6(1)(f))</td><td>Up to 12 months</td></tr>
+					<tr><td>Marketing preferences</td><td>Optional newsletters</td><td>Consent (Art. 6(1)(a))</td><td>Until you withdraw consent</td></tr>
+				</tbody>
+			</table>
+			<h2>How we protect it</h2>
+			<p>Personal data is encrypted at rest (AES-256-GCM), transmitted only over HTTPS, and accessible only to authorised staff. Uploaded photos have location metadata removed.</p>
+			<h2>Who we share it with</h2>
+			<p>Only processors needed to run the service (hosting, email delivery, file storage), under data processing agreements. List them here with their locations and transfer safeguards.</p>
+			<h2>Your rights</h2>
+			<p>You can access, correct, export and delete your data at any time from your <a href="/account">account page</a>. You may also object, restrict processing, withdraw consent and complain to your data protection authority.</p>
+			<h2>Cookies</h2>
+			<p>We use only strictly necessary cookies. See the <a href="/cookies">cookie notice</a>.</p>
+		}
+	}
+}
+
+templ Terms() {
+	@layouts.Base() {
+		@prose() {
+			<h1>Terms of service</h1>
+			<p class="text-muted">Version { auth.TermsVersion }</p>
+			<p>Replace this template with your terms: service description, acceptable use, user content licence, fees and refunds (consumer withdrawal rights in the EU), liability limits, termination, governing law and contact details.</p>
+		}
+	}
+}
+
+templ Cookies() {
+	@layouts.Base() {
+		@prose() {
+			<h1>Cookies</h1>
+			<p>We only use cookies that are strictly necessary to provide the service you request, so no consent banner is required (ePrivacy Directive Art. 5(3) exemption).</p>
+			<table>
+				<thead><tr><th>Name</th><th>Purpose</th><th>Duration</th></tr></thead>
+				<tbody>
+					<tr><td>__Host-at</td><td>Keeps you signed in (short-lived access token)</td><td>15 minutes</td></tr>
+					<tr><td>__Host-rt</td><td>Renews your sign-in securely</td><td>30 days</td></tr>
+					<tr><td>flash</td><td>Shows a one-time confirmation message</td><td>1 minute</td></tr>
+				</tbody>
+			</table>
+			<p>Your light/dark theme choice is stored in your browser's local storage and never sent to us.</p>
+			<p>If you add analytics or marketing tools that set non-essential cookies, you must add a consent banner first (see docs/compliance/cookies-and-tracking.md).</p>
+		}
+	}
+}
+
+templ Accessibility() {
+	@layouts.Base() {
+		@prose() {
+			<h1>Accessibility statement</h1>
+			<p>We aim to meet WCAG 2.2 level AA, as required by the European Accessibility Act (EN 301 549). The site supports keyboard navigation, screen readers, zoom up to 400% and reduced-motion preferences.</p>
+			<p>Known limitations: list them here. To report a barrier, contact us and we will respond within 5 working days.</p>
+		}
+	}
+}
+
+templ MagicLink(token string) {
+	@layouts.Base() {
+		<div class="max-w-sm mx-auto card text-center">
+			<h1 class="text-xl font-semibold">Continue signing in</h1>
+			<p class="text-muted mt-2 mb-6">Click below to finish signing in on this device.</p>
+			<form method="post" action="/auth/link">
+				<input type="hidden" name="t" value={ token }/>
+				<button type="submit" class="btn btn-primary w-full">Sign in</button>
+			</form>
+		</div>
+	}
+}

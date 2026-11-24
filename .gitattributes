@@ -1,0 +1,7 @@
+# Force LF everywhere so scripts and Docker builds work when the repo is touched from Windows.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary
